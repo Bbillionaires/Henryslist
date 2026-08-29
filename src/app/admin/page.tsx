@@ -1,5 +1,5 @@
 import { getDashboardStats } from "@/lib/admin/stats";
-import { formatCents } from "@/lib/settings";
+import { formatCents } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 
 function Stat({ label, value }: { label: string; value: string | number }) {

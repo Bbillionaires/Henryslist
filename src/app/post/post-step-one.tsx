@@ -6,7 +6,7 @@ import { Label, Input, Select, FieldError } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { WizardSteps } from "@/components/listing-wizard-steps";
 import { useToast } from "@/components/ui/toast";
-import { formatCents } from "@/lib/settings";
+import { formatCents } from "@/lib/format";
 import type { CategoryWithSubcategories } from "@/lib/categories";
 
 export function PostStepOne({ categories }: { categories: CategoryWithSubcategories[] }) {
@@ -60,8 +60,9 @@ export function PostStepOne({ categories }: { categories: CategoryWithSubcategor
         {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
 
         <div>
-          <Label required>Category</Label>
+          <Label htmlFor="category" required>Category</Label>
           <Select
+            id="category"
             value={categoryId}
             onChange={(e) => {
               setCategoryId(e.target.value);
@@ -79,8 +80,8 @@ export function PostStepOne({ categories }: { categories: CategoryWithSubcategor
 
         {subcategories.length > 0 && (
           <div>
-            <Label>Subcategory</Label>
-            <Select value={subcategoryId} onChange={(e) => setSubcategoryId(e.target.value)}>
+            <Label htmlFor="subcategory">Subcategory</Label>
+            <Select id="subcategory" value={subcategoryId} onChange={(e) => setSubcategoryId(e.target.value)}>
               <option value="">Select a subcategory (optional)…</option>
               {subcategories.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -93,17 +94,17 @@ export function PostStepOne({ categories }: { categories: CategoryWithSubcategor
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label>City</Label>
-            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Austin" />
+            <Label htmlFor="city">City</Label>
+            <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Austin" />
           </div>
           <div>
-            <Label>State</Label>
-            <Input value={state} onChange={(e) => setState(e.target.value)} placeholder="TX" maxLength={2} />
+            <Label htmlFor="state">State</Label>
+            <Input id="state" value={state} onChange={(e) => setState(e.target.value)} placeholder="TX" maxLength={2} />
           </div>
         </div>
         <div>
-          <Label>ZIP code</Label>
-          <Input value={zip} onChange={(e) => setZip(e.target.value)} placeholder="78701" />
+          <Label htmlFor="zip">ZIP code</Label>
+          <Input id="zip" value={zip} onChange={(e) => setZip(e.target.value)} placeholder="78701" />
           <FieldError>{undefined}</FieldError>
         </div>
 

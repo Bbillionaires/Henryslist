@@ -1,3 +1,4 @@
+import "server-only";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 
@@ -68,8 +69,4 @@ export async function setPlatformSetting(key: keyof SettingsShape, value: unknow
 
 export function invalidateSettingsCache() {
   cache = null;
-}
-
-export function formatCents(cents: number): string {
-  return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 }

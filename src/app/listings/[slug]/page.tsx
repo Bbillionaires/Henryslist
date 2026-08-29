@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { getListingBySlug, isPubliclyViewable, recordListingView, getSimilarListings } from "@/lib/listings/queries";
 import { getCurrentUser } from "@/lib/rbac";
 import { getRatingSummary } from "@/lib/reviews";
-import { formatCents } from "@/lib/settings";
+import { formatCents } from "@/lib/format";
 import { clientIp } from "@/lib/rate-limit";
 import { clientEnv } from "@/lib/env";
 import { CONDITION_LABELS } from "@/lib/constants";

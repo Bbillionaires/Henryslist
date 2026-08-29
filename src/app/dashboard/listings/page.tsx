@@ -7,7 +7,7 @@ import Image from "next/image";
 import { Card, Badge } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { formatCents } from "@/lib/settings";
+import { formatCents } from "@/lib/format";
 import { LISTING_STATUS_LABELS } from "@/lib/constants";
 import { Eye, MessageCircle, Heart, Pencil, PauseCircle, PlayCircle, Trash2, RefreshCw } from "lucide-react";
 

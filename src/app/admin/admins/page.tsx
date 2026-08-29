@@ -64,12 +64,12 @@ export default function AdminAdminsPage() {
       <Card className="p-4">
         <div className="flex items-end gap-2">
           <div className="flex-1">
-            <Label>User email (must already have an account)</Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@example.com" />
+            <Label htmlFor="grantEmail">User email (must already have an account)</Label>
+            <Input id="grantEmail" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@example.com" />
           </div>
           <div>
-            <Label>Role</Label>
-            <Select value={role} onChange={(e) => setRole(e.target.value)}>
+            <Label htmlFor="grantRole">Role</Label>
+            <Select id="grantRole" value={role} onChange={(e) => setRole(e.target.value)}>
               {ROLES.map((r) => (
                 <option key={r} value={r}>
                   {r.replace("_", " ")}

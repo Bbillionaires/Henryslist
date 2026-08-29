@@ -47,12 +47,12 @@ export default function EditContentPage({ params }: { params: Promise<{ slug: st
     <div className="max-w-3xl space-y-4">
       <h1 className="text-2xl font-bold text-slate-900">Edit /help/{slug}</h1>
       <div>
-        <Label>Title</Label>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+        <Label htmlFor="pageTitle">Title</Label>
+        <Input id="pageTitle" value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
       <div>
-        <Label>Body (HTML)</Label>
-        <Textarea rows={20} value={body} onChange={(e) => setBody(e.target.value)} className="font-mono text-xs" />
+        <Label htmlFor="pageBody">Body (HTML)</Label>
+        <Textarea id="pageBody" rows={20} value={body} onChange={(e) => setBody(e.target.value)} className="font-mono text-xs" />
         <p className="mt-1 text-xs text-slate-400">Supports basic HTML tags: h2, p, ul, li, strong, a.</p>
       </div>
       <Button onClick={save} disabled={saving}>

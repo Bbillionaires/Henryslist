@@ -54,8 +54,8 @@ export function LeaveReviewButton({ revieweeId, revieweeName, listingId }: { rev
               ))}
             </div>
             <div className="mt-3">
-              <Label>Comments (optional)</Label>
-              <Textarea rows={3} value={body} onChange={(e) => setBody(e.target.value)} />
+              <Label htmlFor="reviewBody">Comments (optional)</Label>
+              <Textarea id="reviewBody" rows={3} value={body} onChange={(e) => setBody(e.target.value)} />
             </div>
             <Button className="mt-4 w-full" onClick={submit} disabled={submitting}>
               {submitting ? "Submitting…" : "Submit review"}

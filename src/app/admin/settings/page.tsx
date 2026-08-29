@@ -60,12 +60,12 @@ export default function AdminSettingsPage() {
         <h2 className="text-sm font-semibold text-slate-700">Pricing</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label>Listing price (USD)</Label>
-            <Input type="number" min={0} step="0.01" value={priceDollars} onChange={(e) => setPriceDollars(e.target.value)} />
+            <Label htmlFor="listingPrice">Listing price (USD)</Label>
+            <Input id="listingPrice" type="number" min={0} step="0.01" value={priceDollars} onChange={(e) => setPriceDollars(e.target.value)} />
           </div>
           <div>
-            <Label>Duration (days)</Label>
-            <Input type="number" min={1} value={durationDays} onChange={(e) => setDurationDays(e.target.value)} />
+            <Label htmlFor="listingDuration">Duration (days)</Label>
+            <Input id="listingDuration" type="number" min={1} value={durationDays} onChange={(e) => setDurationDays(e.target.value)} />
           </div>
         </div>
         <p className="text-xs text-slate-400">Changing these only affects listings posted or renewed after saving.</p>
@@ -74,12 +74,12 @@ export default function AdminSettingsPage() {
       <Card className="space-y-4 p-4">
         <h2 className="text-sm font-semibold text-slate-700">Homepage</h2>
         <div>
-          <Label>Tagline</Label>
-          <Input value={tagline} onChange={(e) => setTagline(e.target.value)} />
+          <Label htmlFor="tagline">Tagline</Label>
+          <Input id="tagline" value={tagline} onChange={(e) => setTagline(e.target.value)} />
         </div>
         <div>
-          <Label>Subtitle</Label>
-          <Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
+          <Label htmlFor="subtitle">Subtitle</Label>
+          <Input id="subtitle" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
         </div>
         <label className="flex items-center gap-2 text-sm text-slate-600">
           <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />

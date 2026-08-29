@@ -63,8 +63,8 @@ export function ReportButton({ targetType, targetId }: { targetType: "LISTING" |
                 <X size={18} className="text-slate-400" />
               </button>
             </div>
-            <Label>Reason</Label>
-            <Select value={reason} onChange={(e) => setReason(e.target.value)}>
+            <Label htmlFor="reportReason">Reason</Label>
+            <Select id="reportReason" value={reason} onChange={(e) => setReason(e.target.value)}>
               {Object.entries(REPORT_REASON_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -72,8 +72,8 @@ export function ReportButton({ targetType, targetId }: { targetType: "LISTING" |
               ))}
             </Select>
             <div className="mt-3">
-              <Label>Additional details (optional)</Label>
-              <Textarea rows={3} value={details} onChange={(e) => setDetails(e.target.value)} />
+              <Label htmlFor="reportDetails">Additional details (optional)</Label>
+              <Textarea id="reportDetails" rows={3} value={details} onChange={(e) => setDetails(e.target.value)} />
             </div>
             <Button className="mt-4 w-full" variant="danger" onClick={submit} disabled={submitting}>
               {submitting ? "Submitting…" : "Submit report"}

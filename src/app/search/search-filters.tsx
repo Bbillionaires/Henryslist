@@ -42,13 +42,13 @@ export function SearchFilters({
   return (
     <form method="get" action="/search" className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
       <div>
-        <Label>Keyword</Label>
-        <Input name="q" defaultValue={params.q} placeholder="Search…" />
+        <Label htmlFor="q">Keyword</Label>
+        <Input id="q" name="q" defaultValue={params.q} placeholder="Search…" />
       </div>
 
       <div>
-        <Label>Category</Label>
-        <Select name="category" defaultValue={params.category ?? ""}>
+        <Label htmlFor="category">Category</Label>
+        <Select id="category" name="category" defaultValue={params.category ?? ""}>
           <option value="">All categories</option>
           {categories.map((c) => (
             <option key={c.id} value={c.slug}>
@@ -60,8 +60,8 @@ export function SearchFilters({
 
       {selectedCategory && selectedCategory.subcategories.length > 0 && (
         <div>
-          <Label>Subcategory</Label>
-          <Select name="subcategory" defaultValue={params.subcategory ?? ""}>
+          <Label htmlFor="subcategory">Subcategory</Label>
+          <Select id="subcategory" name="subcategory" defaultValue={params.subcategory ?? ""}>
             <option value="">All</option>
             {selectedCategory.subcategories.map((s) => (
               <option key={s.id} value={s.slug}>
@@ -73,17 +73,19 @@ export function SearchFilters({
       )}
 
       <div>
-        <Label>Price range</Label>
+        <Label htmlFor="minPrice">Price range</Label>
         <div className="flex items-center gap-2">
-          <Input name="minPrice" type="number" min={0} placeholder="Min" defaultValue={params.minPrice} />
-          <span className="text-slate-400">–</span>
-          <Input name="maxPrice" type="number" min={0} placeholder="Max" defaultValue={params.maxPrice} />
+          <Input id="minPrice" name="minPrice" type="number" min={0} placeholder="Min" defaultValue={params.minPrice} aria-label="Minimum price" />
+          <span className="text-slate-400" aria-hidden="true">
+            –
+          </span>
+          <Input name="maxPrice" type="number" min={0} placeholder="Max" defaultValue={params.maxPrice} aria-label="Maximum price" />
         </div>
       </div>
 
       <div>
-        <Label>Condition</Label>
-        <Select name="condition" defaultValue={params.condition ?? ""}>
+        <Label htmlFor="condition">Condition</Label>
+        <Select id="condition" name="condition" defaultValue={params.condition ?? ""}>
           <option value="">Any</option>
           {Object.entries(CONDITION_LABELS)
             .filter(([k]) => k !== "NOT_APPLICABLE")
@@ -96,13 +98,13 @@ export function SearchFilters({
       </div>
 
       <div>
-        <Label>ZIP code</Label>
-        <Input name="zip" defaultValue={params.zip} placeholder="e.g. 78701" />
+        <Label htmlFor="zip">ZIP code</Label>
+        <Input id="zip" name="zip" defaultValue={params.zip} placeholder="e.g. 78701" />
       </div>
 
       <div>
-        <Label>Distance</Label>
-        <Select name="radius" defaultValue={params.radius ?? ""}>
+        <Label htmlFor="radius">Distance</Label>
+        <Select id="radius" name="radius" defaultValue={params.radius ?? ""}>
           <option value="">Anywhere</option>
           {RADIUS_OPTIONS.map((r) => (
             <option key={r} value={r}>
@@ -113,8 +115,8 @@ export function SearchFilters({
       </div>
 
       <div>
-        <Label>Date posted</Label>
-        <Select name="datePosted" defaultValue={params.datePosted ?? "any"}>
+        <Label htmlFor="datePosted">Date posted</Label>
+        <Select id="datePosted" name="datePosted" defaultValue={params.datePosted ?? "any"}>
           <option value="any">Any time</option>
           <option value="24h">Last 24 hours</option>
           <option value="week">Last week</option>
@@ -123,8 +125,8 @@ export function SearchFilters({
       </div>
 
       <div>
-        <Label>Sort by</Label>
-        <Select name="sort" defaultValue={params.sort ?? "newest"}>
+        <Label htmlFor="sort">Sort by</Label>
+        <Select id="sort" name="sort" defaultValue={params.sort ?? "newest"}>
           <option value="relevance">Relevance</option>
           <option value="newest">Newest</option>
           <option value="oldest">Oldest</option>

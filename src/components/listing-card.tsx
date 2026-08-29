@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ImageOff, MapPin } from "lucide-react";
-import { formatCents } from "@/lib/settings";
+import { formatCents } from "@/lib/format";
 import { CONDITION_LABELS } from "@/lib/constants";
 import { Badge } from "@/components/ui/card";
 

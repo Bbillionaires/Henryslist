@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, Badge } from "@/components/ui/card";
-import { formatCents } from "@/lib/settings";
+import { formatCents } from "@/lib/format";
 
 interface PaymentRow {
   id: string;

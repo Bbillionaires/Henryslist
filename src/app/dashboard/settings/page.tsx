@@ -178,38 +178,38 @@ export default function SettingsPage() {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label>Full name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Label htmlFor="fullName">Full name</Label>
+            <Input id="fullName" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Display name</Label>
-            <Input value={profile.displayName ?? ""} onChange={(e) => setProfile({ ...profile, displayName: e.target.value })} />
+            <Label htmlFor="displayName">Display name</Label>
+            <Input id="displayName" value={profile.displayName ?? ""} onChange={(e) => setProfile({ ...profile, displayName: e.target.value })} />
           </div>
         </div>
         <div>
-          <Label>Bio</Label>
-          <Textarea rows={2} value={profile.bio ?? ""} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} />
+          <Label htmlFor="bio">Bio</Label>
+          <Textarea id="bio" rows={2} value={profile.bio ?? ""} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} />
         </div>
         <div>
-          <Label>Email</Label>
-          <Input value={session?.user?.email ?? ""} disabled />
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" value={session?.user?.email ?? ""} disabled />
         </div>
         <div>
-          <Label>Phone number</Label>
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 555-5555" />
+          <Label htmlFor="phone">Phone number</Label>
+          <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 555-5555" />
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <Label>City</Label>
-            <Input value={city} onChange={(e) => setCity(e.target.value)} />
+            <Label htmlFor="settingsCity">City</Label>
+            <Input id="settingsCity" value={city} onChange={(e) => setCity(e.target.value)} />
           </div>
           <div>
-            <Label>State</Label>
-            <Input value={state} onChange={(e) => setState(e.target.value)} maxLength={2} />
+            <Label htmlFor="settingsState">State</Label>
+            <Input id="settingsState" value={state} onChange={(e) => setState(e.target.value)} maxLength={2} />
           </div>
           <div>
-            <Label>ZIP</Label>
-            <Input value={zip} onChange={(e) => setZip(e.target.value)} />
+            <Label htmlFor="settingsZip">ZIP</Label>
+            <Input id="settingsZip" value={zip} onChange={(e) => setZip(e.target.value)} />
           </div>
         </div>
         <Button onClick={saveProfile} disabled={savingProfile}>
@@ -247,8 +247,9 @@ export default function SettingsPage() {
           Allow my email to be shown on listings (per-listing setting can override)
         </label>
         <div>
-          <Label>Preferred contact method</Label>
+          <Label htmlFor="preferredContactMethod">Preferred contact method</Label>
           <Select
+            id="preferredContactMethod"
             value={profile.preferredContactMethod}
             onChange={(e) => setProfile({ ...profile, preferredContactMethod: e.target.value })}
             className="max-w-xs"
@@ -281,12 +282,12 @@ export default function SettingsPage() {
       <Card className="space-y-3 p-4">
         <h2 className="text-sm font-semibold text-slate-700">Change password</h2>
         <div>
-          <Label>Current password</Label>
-          <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+          <Label htmlFor="currentPassword">Current password</Label>
+          <Input id="currentPassword" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
         </div>
         <div>
-          <Label>New password</Label>
-          <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          <Label htmlFor="newPassword">New password</Label>
+          <Input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
         </div>
         <Button onClick={changePassword} disabled={changingPassword || !currentPassword || !newPassword}>
           {changingPassword ? "Updating…" : "Update password"}
@@ -296,7 +297,14 @@ export default function SettingsPage() {
       <Card className="space-y-3 border-red-200 p-4">
         <h2 className="text-sm font-semibold text-red-700">Delete account</h2>
         <p className="text-sm text-slate-500">This permanently deletes your account and removes your active listings. This cannot be undone.</p>
-        <Input type="password" placeholder="Confirm your password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} className="max-w-xs" />
+        <Input
+          type="password"
+          aria-label="Confirm your password to delete your account"
+          placeholder="Confirm your password"
+          value={deletePassword}
+          onChange={(e) => setDeletePassword(e.target.value)}
+          className="max-w-xs"
+        />
         <Button variant="danger" onClick={deleteAccount} disabled={deleting}>
           {deleting ? "Deleting…" : "Delete my account"}
         </Button>

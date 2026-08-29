@@ -118,21 +118,22 @@ export default function DetailsStepPage({ params }: { params: Promise<{ id: stri
         {formError && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</div>}
 
         <div>
-          <Label required>Title</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="What are you posting?" />
+          <Label htmlFor="title" required>Title</Label>
+          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="What are you posting?" />
           <FieldError>{fieldErrors.title}</FieldError>
         </div>
 
         <div>
-          <Label required>Description</Label>
-          <Textarea rows={6} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={5000} />
+          <Label htmlFor="description" required>Description</Label>
+          <Textarea id="description" rows={6} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={5000} />
           <FieldError>{fieldErrors.description}</FieldError>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label>Price (USD)</Label>
+            <Label htmlFor="price">Price (USD)</Label>
             <Input
+              id="price"
               type="number"
               min={0}
               step="0.01"
@@ -147,8 +148,8 @@ export default function DetailsStepPage({ params }: { params: Promise<{ id: stri
             </label>
           </div>
           <div>
-            <Label>Condition</Label>
-            <Select value={condition} onChange={(e) => setCondition(e.target.value as (typeof CONDITION_VALUES)[number])}>
+            <Label htmlFor="condition">Condition</Label>
+            <Select id="condition" value={condition} onChange={(e) => setCondition(e.target.value as (typeof CONDITION_VALUES)[number])}>
               <option value="NOT_APPLICABLE">Not applicable</option>
               {CONDITION_VALUES.slice(0, 5).map((v) => (
                 <option key={v} value={v}>
@@ -175,13 +176,13 @@ export default function DetailsStepPage({ params }: { params: Promise<{ id: stri
         )}
 
         <div>
-          <Label>Tags</Label>
-          <Input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="comma, separated, tags" />
+          <Label htmlFor="tags">Tags</Label>
+          <Input id="tags" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="comma, separated, tags" />
         </div>
 
         <div>
-          <Label>Street address (optional)</Label>
-          <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Only shown if you choose to display it" />
+          <Label htmlFor="address">Street address (optional)</Label>
+          <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Only shown if you choose to display it" />
           <label className="mt-2 flex items-center gap-2 text-sm text-slate-600">
             <input
               type="checkbox"

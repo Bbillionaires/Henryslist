@@ -7,7 +7,7 @@ import { Card, Badge } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { LISTING_STATUS_LABELS } from "@/lib/constants";
-import { formatCents } from "@/lib/settings";
+import { formatCents } from "@/lib/format";
 
 interface AdminListingRow {
   id: string;

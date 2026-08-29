@@ -1,6 +1,10 @@
 import "server-only";
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { ADMIN_ROLES, hasPermission, type AdminRole, type Permission } from "@/lib/permissions";
+
+export { ADMIN_ROLES, hasPermission };
+export type { AdminRole, Permission };
 
 export class HttpError extends Error {
   constructor(
@@ -38,35 +42,8 @@ export async function requireVerifiedUser() {
   return user;
 }
 
-export const ADMIN_ROLES = ["SUPER_ADMIN", "MODERATOR", "SUPPORT_AGENT", "FINANCE_ADMIN"] as const;
-export type AdminRole = (typeof ADMIN_ROLES)[number];
-
-/** Permission matrix: which admin roles may perform which coarse-grained action. */
-const PERMISSIONS: Record<string, AdminRole[]> = {
-  "users.view": ["SUPER_ADMIN", "MODERATOR", "SUPPORT_AGENT", "FINANCE_ADMIN"],
-  "users.suspend": ["SUPER_ADMIN", "MODERATOR", "SUPPORT_AGENT"],
-  "users.ban": ["SUPER_ADMIN", "MODERATOR"],
-  "users.delete": ["SUPER_ADMIN"],
-  "listings.view": ["SUPER_ADMIN", "MODERATOR", "SUPPORT_AGENT", "FINANCE_ADMIN"],
-  "listings.moderate": ["SUPER_ADMIN", "MODERATOR"],
-  "categories.manage": ["SUPER_ADMIN"],
-  "payments.view": ["SUPER_ADMIN", "FINANCE_ADMIN"],
-  "payments.refund": ["SUPER_ADMIN", "FINANCE_ADMIN"],
-  "reports.moderate": ["SUPER_ADMIN", "MODERATOR", "SUPPORT_AGENT"],
-  "reviews.moderate": ["SUPER_ADMIN", "MODERATOR"],
-  "settings.manage": ["SUPER_ADMIN"],
-  "admins.manage": ["SUPER_ADMIN"],
-  "content.manage": ["SUPER_ADMIN", "MODERATOR"],
-  "analytics.view": ["SUPER_ADMIN", "MODERATOR", "FINANCE_ADMIN"],
-};
-
-export function hasPermission(role: string | null | undefined, permission: keyof typeof PERMISSIONS): boolean {
-  if (!role) return false;
-  return PERMISSIONS[permission]?.includes(role as AdminRole) ?? false;
-}
-
 /** Throws HttpError(401/403) unless the signed-in user is an active admin with the given permission. */
-export async function requireAdmin(permission?: keyof typeof PERMISSIONS) {
+export async function requireAdmin(permission?: Permission) {
   const user = await requireUser();
   if (!user.adminRole) throw new HttpError(403, "Admin access required.");
   if (permission && !hasPermission(user.adminRole, permission)) {
