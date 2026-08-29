@@ -12,7 +12,9 @@ const JPEG_QUALITY = 82;
 
 export interface ProcessedImage {
   url: string;
+  key: string;
   thumbnailUrl: string;
+  thumbnailKey: string;
   width: number;
   height: number;
 }
@@ -56,7 +58,9 @@ export async function processListingImage(buffer: Buffer): Promise<ProcessedImag
 
   return {
     url: fullFile.url,
+    key: fullFile.key,
     thumbnailUrl: thumbFile.url,
+    thumbnailKey: thumbFile.key,
     width: full.info.width,
     height: full.info.height,
   };

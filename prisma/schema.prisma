@@ -378,7 +378,9 @@ model ListingImage {
   listingId        String
   listing          Listing               @relation(fields: [listingId], references: [id], onDelete: Cascade)
   url              String
+  key              String // storage-provider key, used to delete the underlying file
   thumbnailUrl     String
+  thumbnailKey     String
   width            Int?
   height           Int?
   sortOrder        Int                   @default(0)

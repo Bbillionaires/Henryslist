@@ -65,5 +65,8 @@
   },
   "overrides": {
     "postcss": "^8.5.26"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
