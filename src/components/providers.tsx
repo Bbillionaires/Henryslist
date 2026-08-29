@@ -2,11 +2,15 @@
 
 import { SessionProvider } from "next-auth/react";
 import { ToastProvider } from "@/components/ui/toast";
+import { PwaRegister } from "@/components/pwa-register";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider>
+        <PwaRegister />
+        {children}
+      </ToastProvider>
     </SessionProvider>
   );
 }

@@ -14,6 +14,13 @@ export const metadata: Metadata = {
   },
   description: "Post a listing for $1 and keep it live for 45 days. A modern, fast classifieds marketplace for your community.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
   openGraph: {
     type: "website",
     siteName: clientEnv.NEXT_PUBLIC_SITE_NAME,
