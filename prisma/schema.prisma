@@ -1,0 +1,820 @@
+// Henry's List — database schema
+// PostgreSQL via Prisma. See docs/DATABASE.md for an ER overview.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// Auth (Auth.js / NextAuth v5 — Prisma adapter shapes) + Users
+// ============================================================================
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DELETED
+}
+
+model User {
+  id              String     @id @default(cuid())
+  name            String?
+  email           String?    @unique
+  emailVerified   DateTime?
+  image           String?
+  passwordHash    String? // null for OAuth-only accounts
+  phone           String?
+  phoneVerifiedAt DateTime?
+  status          UserStatus @default(ACTIVE)
+  suspendedUntil  DateTime?
+  banReason       String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  deletedAt       DateTime?
+  lastLoginAt     DateTime?
+  lastLoginIp     String?
+
+  accounts  Account[]
+  sessions  Session[]
+  profile   Profile?
+  adminUser AdminUser?
+
+  listings               Listing[]               @relation("UserListings")
+  payments               Payment[]
+  favorites              Favorite[]
+  savedSearches          SavedSearch[]
+  notifications          Notification[]
+  notificationPref       NotificationPreference?
+  sentMessages           Message[]               @relation("MessageSender")
+  buyerConversations     Conversation[]          @relation("ConversationBuyer")
+  sellerConversations    Conversation[]          @relation("ConversationSeller")
+  reportsFiled           Report[]                @relation("ReportsFiled")
+  reportsReceived        Report[]                @relation("ReportsAgainstUser")
+  reviewsGiven           Review[]                @relation("ReviewsGiven")
+  reviewsReceived        Review[]                @relation("ReviewsReceived")
+  blocksInitiated        Block[]                 @relation("BlocksInitiated")
+  blocksReceived         Block[]                 @relation("BlocksReceived")
+  auditLogs              AuditLog[]
+  pushSubscriptions      PushSubscription[]
+  moderationActionsTaken ModerationAction[]      @relation("ModerationActor")
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// One-time tokens for email verification / password reset (separate from
+// Auth.js VerificationToken so we control TTL, purpose and single-use).
+enum SecurityTokenPurpose {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+model SecurityToken {
+  id        String               @id @default(cuid())
+  userId    String
+  purpose   SecurityTokenPurpose
+  tokenHash String               @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  @@index([userId, purpose])
+}
+
+model Profile {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName            String?
+  bio                    String?
+  avatarUrl              String?
+  locationId             String?
+  location               Location? @relation(fields: [locationId], references: [id])
+  showExactLocation      Boolean   @default(false)
+  showPhonePublicly      Boolean   @default(false)
+  showEmailPublicly      Boolean   @default(false)
+  preferredContactMethod String    @default("MESSAGE") // MESSAGE | PHONE | EMAIL
+  isPublic               Boolean   @default(true)
+  joinedAt               DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+model NotificationPreference {
+  id                    String  @id @default(cuid())
+  userId                String  @unique
+  user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailListingPublished Boolean @default(true)
+  emailListingExpiring  Boolean @default(true)
+  emailListingExpired   Boolean @default(true)
+  emailNewMessage       Boolean @default(true)
+  emailSavedSearchMatch Boolean @default(true)
+  emailPriceChange      Boolean @default(true)
+  emailMarketing        Boolean @default(false)
+  pushEnabled           Boolean @default(false)
+  inAppEnabled          Boolean @default(true)
+}
+
+// ============================================================================
+// Admin / RBAC
+// ============================================================================
+
+enum AdminRole {
+  SUPER_ADMIN
+  MODERATOR
+  SUPPORT_AGENT
+  FINANCE_ADMIN
+}
+
+model AdminUser {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      AdminRole
+  grantedAt DateTime  @default(now())
+  grantedBy String?
+  active    Boolean   @default(true)
+
+  @@index([role])
+}
+
+// ============================================================================
+// Locations
+// ============================================================================
+
+model Location {
+  id          String   @id @default(cuid())
+  country     String   @default("US")
+  state       String?
+  city        String?
+  zip         String?
+  address     String? // exact street address, only shown if owner opts in
+  lat         Float?
+  lng         Float?
+  displayName String? // e.g. "Austin, TX" — precomputed for fast rendering
+  createdAt   DateTime @default(now())
+
+  listings Listing[]
+  profiles Profile[]
+
+  @@index([zip])
+  @@index([state, city])
+  @@index([lat, lng])
+}
+
+// ============================================================================
+// Categories
+// ============================================================================
+
+model Category {
+  id            String          @id @default(cuid())
+  name          String
+  slug          String          @unique
+  description   String?
+  icon          String?
+  sortOrder     Int             @default(0)
+  isHidden      Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  subcategories Subcategory[]
+  listings      Listing[]
+  fields        CategoryField[]
+
+  @@index([sortOrder])
+}
+
+model Subcategory {
+  id          String          @id @default(cuid())
+  categoryId  String
+  category    Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  sortOrder   Int             @default(0)
+  isHidden    Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  listings    Listing[]
+  fields      CategoryField[]
+
+  @@unique([categoryId, slug])
+  @@index([sortOrder])
+}
+
+// Defines dynamic, category-specific form fields (e.g. vehicles get
+// Make/Model/Year/Mileage/VIN). Rendered dynamically on the posting form and
+// stored per-listing in ListingAttribute rows.
+enum FieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  SELECT
+  MULTISELECT
+  BOOLEAN
+  DATE
+}
+
+model CategoryField {
+  id             String       @id @default(cuid())
+  categoryId     String?
+  category       Category?    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategoryId  String?
+  subcategory    Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  key            String // machine name, e.g. "mileage"
+  label          String // display label, e.g. "Mileage"
+  type           FieldType
+  required       Boolean      @default(false)
+  options        Json? // for SELECT/MULTISELECT: string[]
+  unit           String? // e.g. "mi", "sq ft"
+  sortOrder      Int          @default(0)
+  isSearchFilter Boolean      @default(true)
+
+  attributes ListingAttribute[]
+
+  @@index([categoryId])
+  @@index([subcategoryId])
+}
+
+// ============================================================================
+// Listings
+// ============================================================================
+
+enum ListingStatus {
+  DRAFT
+  PENDING_PAYMENT
+  ACTIVE
+  PAUSED
+  EXPIRED
+  REMOVED
+  REJECTED
+  FLAGGED
+}
+
+enum ListingCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+  NOT_APPLICABLE
+}
+
+model Listing {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  sellerId      String
+  seller        User         @relation("UserListings", fields: [sellerId], references: [id])
+  categoryId    String
+  category      Category     @relation(fields: [categoryId], references: [id])
+  subcategoryId String?
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id])
+  locationId    String?
+  location      Location?    @relation(fields: [locationId], references: [id])
+
+  title       String
+  description String           @db.Text
+  priceCents  Int? // null = "Contact for price" / not applicable (e.g. free, jobs)
+  isFree      Boolean          @default(false)
+  condition   ListingCondition @default(NOT_APPLICABLE)
+  tags        String[]         @default([])
+
+  contactViaMessages Boolean @default(true)
+  contactViaPhone    Boolean @default(false)
+  contactViaEmail    Boolean @default(false)
+
+  status ListingStatus @default(DRAFT)
+
+  // Lifecycle timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  publishedAt     DateTime?
+  expiresAt       DateTime?
+  pausedAt        DateTime?
+  removedAt       DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+  deletedAt       DateTime?
+
+  // Configurable pricing snapshot (admin can change defaults over time; we
+  // record what THIS listing actually cost/ran for).
+  priceAtPostingCents   Int?
+  durationDaysAtPosting Int?
+
+  // Denormalized counters for fast reads (kept in sync by app logic)
+  viewCount     Int @default(0)
+  favoriteCount Int @default(0)
+  messageCount  Int @default(0)
+
+  // Full text search vector, maintained by a trigger (see migration SQL).
+  // Not read/written directly by Prisma Client.
+  searchVector Unsupported("tsvector")?
+
+  images            ListingImage[]
+  attributes        ListingAttribute[]
+  payments          Payment[]
+  renewals          Renewal[]
+  favorites         Favorite[]
+  conversations     Conversation[]
+  reports           Report[]           @relation("ReportsAgainstListing")
+  reviews           Review[]
+  views             ListingView[]
+  moderationActions ModerationAction[] @relation("ModerationActionsOnListing")
+
+  @@index([status])
+  @@index([categoryId, status])
+  @@index([subcategoryId, status])
+  @@index([sellerId])
+  @@index([expiresAt])
+  @@index([publishedAt])
+  @@index([priceCents])
+  @@index([locationId])
+  @@index([searchVector], type: Gin)
+}
+
+model ListingImage {
+  id               String                @id @default(cuid())
+  listingId        String
+  listing          Listing               @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  url              String
+  thumbnailUrl     String
+  width            Int?
+  height           Int?
+  sortOrder        Int                   @default(0)
+  isPrimary        Boolean               @default(false)
+  moderationStatus ImageModerationStatus @default(PENDING)
+  moderationNotes  String?
+  createdAt        DateTime              @default(now())
+
+  @@index([listingId])
+}
+
+enum ImageModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ListingAttribute {
+  id              String         @id @default(cuid())
+  listingId       String
+  listing         Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  categoryFieldId String?
+  categoryField   CategoryField? @relation(fields: [categoryFieldId], references: [id])
+  key             String
+  label           String
+  value           String
+  numericValue    Float?
+  createdAt       DateTime       @default(now())
+
+  @@unique([listingId, key])
+  @@index([key, numericValue])
+  @@index([key, value])
+}
+
+model ListingView {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  viewerId  String?
+  ipHash    String?
+  createdAt DateTime @default(now())
+
+  @@index([listingId, createdAt])
+}
+
+// ============================================================================
+// Payments
+// ============================================================================
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentType {
+  NEW_LISTING
+  RENEWAL
+}
+
+model Payment {
+  id                      String        @id @default(cuid())
+  userId                  String
+  user                    User          @relation(fields: [userId], references: [id])
+  listingId               String?
+  listing                 Listing?      @relation(fields: [listingId], references: [id])
+  type                    PaymentType
+  status                  PaymentStatus @default(PENDING)
+  amountCents             Int
+  currency                String        @default("usd")
+  stripeCheckoutSessionId String?       @unique
+  stripePaymentIntentId   String?       @unique
+  stripeChargeId          String?
+  failureReason           String?
+  refundedAmountCents     Int?
+  refundedAt              DateTime?
+  refundReason            String?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  succeededAt             DateTime?
+
+  events  PaymentEvent[]
+  renewal Renewal?
+  reviews Review[]
+
+  @@index([userId])
+  @@index([listingId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Raw log of every Stripe webhook event we receive, keyed by Stripe's event
+// id, so duplicate deliveries are a no-op (idempotency) and everything is
+// auditable.
+model PaymentEvent {
+  id            String   @id @default(cuid())
+  paymentId     String?
+  payment       Payment? @relation(fields: [paymentId], references: [id])
+  stripeEventId String   @unique
+  type          String
+  payload       Json
+  processedAt   DateTime @default(now())
+
+  @@index([paymentId])
+}
+
+model Renewal {
+  id                String    @id @default(cuid())
+  listingId         String
+  listing           Listing   @relation(fields: [listingId], references: [id])
+  paymentId         String    @unique
+  payment           Payment   @relation(fields: [paymentId], references: [id])
+  previousExpiresAt DateTime?
+  newExpiresAt      DateTime
+  createdAt         DateTime  @default(now())
+
+  @@index([listingId])
+}
+
+// ============================================================================
+// Messaging
+// ============================================================================
+
+enum ConversationStatus {
+  ACTIVE
+  BLOCKED
+  ARCHIVED
+}
+
+model Conversation {
+  id        String             @id @default(cuid())
+  listingId String?
+  listing   Listing?           @relation(fields: [listingId], references: [id])
+  buyerId   String
+  buyer     User               @relation("ConversationBuyer", fields: [buyerId], references: [id])
+  sellerId  String
+  seller    User               @relation("ConversationSeller", fields: [sellerId], references: [id])
+  status    ConversationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  messages Message[]
+  reports  Report[]  @relation("ReportsAgainstConversation")
+
+  @@unique([listingId, buyerId, sellerId])
+  @@index([buyerId])
+  @@index([sellerId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("MessageSender", fields: [senderId], references: [id])
+  body           String       @db.Text
+  readAt         DateTime?
+  isFlagged      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  reports Report[] @relation("ReportsAgainstMessage")
+
+  @@index([conversationId, createdAt])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blocker   User     @relation("BlocksInitiated", fields: [blockerId], references: [id])
+  blockedId String
+  blocked   User     @relation("BlocksReceived", fields: [blockedId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}
+
+// ============================================================================
+// Favorites / Saved Searches
+// ============================================================================
+
+model Favorite {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listingId           String
+  listing             Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  createdAt           DateTime @default(now())
+  lastKnownPriceCents Int?
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+}
+
+model SavedSearch {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  query          Json // serialized SearchParams (keyword, categoryId, filters, location, radius, etc.)
+  notifyByEmail  Boolean   @default(true)
+  isPaused       Boolean   @default(false)
+  lastRunAt      DateTime?
+  lastNotifiedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([isPaused])
+}
+
+// ============================================================================
+// Reviews
+// ============================================================================
+
+enum ReviewStatus {
+  PUBLISHED
+  REMOVED
+  FLAGGED
+}
+
+model Review {
+  id         String       @id @default(cuid())
+  reviewerId String
+  reviewer   User         @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  revieweeId String
+  reviewee   User         @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+  listingId  String?
+  listing    Listing?     @relation(fields: [listingId], references: [id])
+  paymentId  String? // ties review to a specific completed transaction
+  payment    Payment?     @relation(fields: [paymentId], references: [id])
+  rating     Int
+  body       String?      @db.Text
+  status     ReviewStatus @default(PUBLISHED)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  reports Report[] @relation("ReportsAgainstReview")
+
+  @@unique([reviewerId, revieweeId, listingId])
+  @@index([revieweeId, status])
+}
+
+// ============================================================================
+// Reports & Moderation
+// ============================================================================
+
+enum ReportReason {
+  SCAM
+  FRAUD
+  SPAM
+  PROHIBITED_ITEM
+  ILLEGAL_ACTIVITY
+  HARASSMENT
+  MISLEADING_INFORMATION
+  DUPLICATE_LISTING
+  WRONG_CATEGORY
+  OTHER
+}
+
+enum ReportTargetType {
+  LISTING
+  USER
+  MESSAGE
+  CONVERSATION
+  REVIEW
+}
+
+enum ReportStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+model Report {
+  id         String           @id @default(cuid())
+  reporterId String
+  reporter   User             @relation("ReportsFiled", fields: [reporterId], references: [id])
+  targetType ReportTargetType
+  reason     ReportReason
+  details    String?          @db.Text
+  status     ReportStatus     @default(OPEN)
+
+  listingId      String?
+  listing        Listing?      @relation("ReportsAgainstListing", fields: [listingId], references: [id])
+  reportedUserId String?
+  reportedUser   User?         @relation("ReportsAgainstUser", fields: [reportedUserId], references: [id])
+  messageId      String?
+  message        Message?      @relation("ReportsAgainstMessage", fields: [messageId], references: [id])
+  conversationId String?
+  conversation   Conversation? @relation("ReportsAgainstConversation", fields: [conversationId], references: [id])
+  reviewId       String?
+  review         Review?       @relation("ReportsAgainstReview", fields: [reviewId], references: [id])
+
+  resolvedById String?
+  resolvedAt   DateTime?
+  resolution   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([targetType])
+  @@index([listingId])
+  @@index([reportedUserId])
+}
+
+enum ModerationActionType {
+  LISTING_APPROVED
+  LISTING_REJECTED
+  LISTING_REMOVED
+  LISTING_FLAGGED
+  LISTING_RESTORED
+  USER_SUSPENDED
+  USER_BANNED
+  USER_UNBANNED
+  REVIEW_REMOVED
+  REPORT_RESOLVED
+  REPORT_DISMISSED
+  REFUND_ISSUED
+  IMAGE_REJECTED
+}
+
+model ModerationAction {
+  id           String               @id @default(cuid())
+  adminId      String
+  admin        User                 @relation("ModerationActor", fields: [adminId], references: [id])
+  actionType   ModerationActionType
+  listingId    String?
+  listing      Listing?             @relation("ModerationActionsOnListing", fields: [listingId], references: [id])
+  targetUserId String?
+  notes        String?
+  createdAt    DateTime             @default(now())
+
+  @@index([adminId])
+  @@index([listingId])
+  @@index([targetUserId])
+}
+
+// ============================================================================
+// Notifications
+// ============================================================================
+
+enum NotificationType {
+  ACCOUNT_VERIFICATION
+  LISTING_PUBLISHED
+  PAYMENT_RECEIPT
+  PAYMENT_FAILED
+  NEW_MESSAGE
+  LISTING_EXPIRING_SOON
+  LISTING_EXPIRED
+  LISTING_RENEWED
+  SAVED_SEARCH_MATCH
+  LISTING_REPORTED
+  ACCOUNT_SECURITY
+  FAVORITE_EXPIRING
+  FAVORITE_REMOVED
+  FAVORITE_PRICE_CHANGE
+  REVIEW_RECEIVED
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  title       String
+  body        String
+  data        Json?
+  link        String?
+  readAt      DateTime?
+  emailSentAt DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, readAt])
+  @@index([createdAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ============================================================================
+// Platform settings, static pages, audit log
+// ============================================================================
+
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model StaticPage {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  body      String   @db.Text
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  type      String // listing_created | listing_paid | listing_view | search | contact_seller_click | message_sent | favorite | renewal | report_filed
+  userId    String?
+  listingId String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([listingId])
+}
