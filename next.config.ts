@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Produces a self-contained .next/standalone build (only the deps each
+  // route actually needs) — what the Dockerfile copies into the final image.
+  output: "standalone",
 };
 
 export default nextConfig;

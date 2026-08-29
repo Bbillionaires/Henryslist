@@ -1,6 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type User } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import sharp from "sharp";
+import { addDays, subDays } from "date-fns";
 import { CATEGORY_SEED } from "./seed-data";
+import { storage } from "../src/lib/storage";
 
 const prisma = new PrismaClient();
 
@@ -178,15 +181,258 @@ async function seedUsers() {
     demoUsers.push(user);
   }
 
+  // Extra admin accounts covering each RBAC role, for exercising the admin
+  // dashboard's role-based restrictions locally without hand-granting roles.
+  const otherAdminRoles = [
+    { email: "moderator@demo.henryslist.example", name: "Mia Moderator", role: "MODERATOR" as const },
+    { email: "support@demo.henryslist.example", name: "Sam Support", role: "SUPPORT_AGENT" as const },
+    { email: "finance@demo.henryslist.example", name: "Fran Finance", role: "FINANCE_ADMIN" as const },
+  ];
+  for (const a of otherAdminRoles) {
+    const user = await prisma.user.upsert({
+      where: { email: a.email },
+      create: {
+        email: a.email,
+        name: a.name,
+        passwordHash: demoPasswordHash,
+        emailVerified: new Date(),
+        profile: { create: { displayName: a.name } },
+        notificationPref: { create: {} },
+      },
+      update: {},
+    });
+    await prisma.adminUser.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id, role: a.role },
+      update: { role: a.role, active: true },
+    });
+  }
+
   console.log(`Seeded admin (${SEED_ADMIN_EMAIL} / ${SEED_ADMIN_PASSWORD}) and ${demoUsers.length} demo users (password: ${SEED_DEMO_PASSWORD}).`);
+  console.log(`Seeded MODERATOR/SUPPORT_AGENT/FINANCE_ADMIN demo admins (password: ${SEED_DEMO_PASSWORD}).`);
   return { adminUser, demoUsers };
+}
+
+async function placeholderImage(hue: number): Promise<{ url: string; key: string; thumbnailUrl: string; thumbnailKey: string }> {
+  // Synthetic solid-color placeholder photos for demo listings — clearly
+  // not real product photography, just enough to exercise the gallery UI.
+  const buffer = await sharp({ create: { width: 800, height: 600, channels: 3, background: { r: (hue * 47) % 255, g: (hue * 91) % 255, b: (hue * 137) % 255 } } })
+    .jpeg()
+    .toBuffer();
+  const thumb = await sharp(buffer).resize(480, 360).jpeg().toBuffer();
+  const [full, thumbFile] = await Promise.all([
+    storage.put(buffer, { folder: "listings/full", extension: "jpg", contentType: "image/jpeg" }),
+    storage.put(thumb, { folder: "listings/thumb", extension: "jpg", contentType: "image/jpeg" }),
+  ]);
+  return { url: full.url, key: full.key, thumbnailUrl: thumbFile.url, thumbnailKey: thumbFile.key };
+}
+
+interface DemoListingSpec {
+  categorySlug: string;
+  title: string;
+  description: string;
+  priceCents: number | null;
+  isFree?: boolean;
+  condition?: "NEW" | "LIKE_NEW" | "GOOD" | "FAIR" | "POOR" | "NOT_APPLICABLE";
+  tags?: string[];
+  status?: "ACTIVE" | "DRAFT" | "EXPIRED" | "PAUSED";
+  attributes?: Record<string, string>;
+}
+
+const DEMO_LISTINGS: DemoListingSpec[] = [
+  {
+    categorySlug: "vehicles",
+    title: "2018 Honda Civic EX — Low Miles",
+    description: "Single owner, garage kept, all service records available. Clean title, no accidents. New tires last spring.",
+    priceCents: 1495000,
+    condition: "GOOD",
+    tags: ["honda", "sedan", "commuter"],
+    attributes: { make: "Honda", model: "Civic", year: "2018", mileage: "42000", transmission: "Automatic", fuelType: "Gasoline" },
+  },
+  {
+    categorySlug: "furniture",
+    title: "Mid-Century Modern Dining Table",
+    description: "Solid walnut, seats 6. Minor surface scratches, otherwise excellent condition. Pickup only.",
+    priceCents: 32000,
+    condition: "GOOD",
+    tags: ["furniture", "dining", "walnut"],
+  },
+  {
+    categorySlug: "electronics",
+    title: "MacBook Pro 14\" M2 — 512GB",
+    description: "Barely used, includes original box and charger. Battery health 98%. AppleCare+ until next year.",
+    priceCents: 129900,
+    condition: "LIKE_NEW",
+    tags: ["apple", "laptop", "macbook"],
+  },
+  {
+    categorySlug: "housing",
+    title: "Sunny 1BR Apartment Near Downtown",
+    description: "Updated kitchen, in-unit laundry, covered parking included. Available now, 12-month lease preferred.",
+    priceCents: 165000,
+    condition: "NOT_APPLICABLE",
+    tags: ["apartment", "downtown"],
+    attributes: { propertyType: "Apartment", bedrooms: "1", bathrooms: "1", squareFootage: "720", leaseDuration: "1 year" },
+  },
+  {
+    categorySlug: "jobs",
+    title: "Part-Time Barista — Local Coffee Shop",
+    description: "Looking for a friendly, reliable barista for weekend shifts. Experience with espresso machines a plus but not required — we'll train.",
+    priceCents: null,
+    tags: ["hiring", "food-service"],
+    attributes: { jobType: "Part-time", remoteOnsite: "On-site", experienceLevel: "Entry level" },
+  },
+  {
+    categorySlug: "pets",
+    title: "Friendly Lab Mix Needs a Home",
+    description: "3 years old, up to date on vaccines, great with kids and other dogs. Rehoming due to a move.",
+    priceCents: 15000,
+    tags: ["dog", "adoption"],
+    attributes: { species: "Dog", breed: "Labrador Mix", age: "3 years", vaccinated: "true" },
+  },
+  {
+    categorySlug: "for-sale",
+    title: "Road Bike — Trek Domane, Size 54",
+    description: "Great condition, recently tuned up with new brake pads. Perfect for someone getting into road cycling.",
+    priceCents: 45000,
+    condition: "GOOD",
+    tags: ["bike", "trek", "cycling"],
+  },
+  {
+    categorySlug: "free-stuff",
+    title: "Free Moving Boxes — Various Sizes",
+    description: "About 20 boxes in good condition, some bubble wrap included. First come first served, must pick up this week.",
+    priceCents: 0,
+    isFree: true,
+    tags: ["free", "moving"],
+  },
+  {
+    categorySlug: "services",
+    title: "Affordable Lawn Care & Landscaping",
+    description: "Weekly mowing, edging, and cleanup. Licensed and insured. Free estimates for new customers.",
+    priceCents: 4000,
+    tags: ["lawn-care", "landscaping"],
+  },
+  {
+    categorySlug: "clothing",
+    title: "Women's Winter Coat — Size M",
+    description: "Warm, barely worn, smoke-free home. Originally $220, selling to make closet space.",
+    priceCents: 6000,
+    condition: "LIKE_NEW",
+    tags: ["coat", "winter", "womens"],
+  },
+];
+
+async function seedListings(demoUsers: User[], settings: { priceCents: number; durationDays: number }) {
+  const categories = await prisma.category.findMany();
+  const categoryBySlug = new Map(categories.map((c) => [c.slug, c]));
+  const fields = await prisma.categoryField.findMany();
+
+  let created = 0;
+  for (let i = 0; i < DEMO_LISTINGS.length; i++) {
+    const spec = DEMO_LISTINGS[i]!;
+    const category = categoryBySlug.get(spec.categorySlug);
+    if (!category) continue;
+
+    const seller = demoUsers[i % demoUsers.length]!;
+    const location = await prisma.location.create({
+      data: { city: "Austin", state: "TX", zip: "78701", country: "US", displayName: "Austin, TX", lat: 30.2672, lng: -97.7431 },
+    });
+
+    const publishedAt = subDays(new Date(), i); // stagger posting dates
+    const expiresAt = addDays(publishedAt, settings.durationDays);
+
+    const listing = await prisma.listing.create({
+      data: {
+        sellerId: seller.id,
+        categoryId: category.id,
+        locationId: location.id,
+        title: spec.title,
+        slug: `${spec.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Math.random().toString(36).slice(2, 8)}`,
+        description: spec.description,
+        priceCents: spec.isFree ? 0 : spec.priceCents,
+        isFree: spec.isFree ?? false,
+        condition: spec.condition ?? "NOT_APPLICABLE",
+        tags: spec.tags ?? [],
+        status: "ACTIVE",
+        publishedAt,
+        expiresAt,
+        priceAtPostingCents: settings.priceCents,
+        durationDaysAtPosting: settings.durationDays,
+        viewCount: Math.floor(Math.random() * 80),
+        favoriteCount: Math.floor(Math.random() * 6),
+      },
+    });
+
+    const image = await placeholderImage(i + 1);
+    await prisma.listingImage.create({
+      data: { listingId: listing.id, ...image, width: 800, height: 600, sortOrder: 0, isPrimary: true, moderationStatus: "APPROVED" },
+    });
+
+    if (spec.attributes) {
+      const categoryFields = fields.filter((f) => f.categoryId === category.id);
+      for (const [key, value] of Object.entries(spec.attributes)) {
+        const field = categoryFields.find((f) => f.key === key);
+        await prisma.listingAttribute.create({
+          data: {
+            listingId: listing.id,
+            categoryFieldId: field?.id,
+            key,
+            label: field?.label ?? key,
+            value,
+            numericValue: field?.type === "NUMBER" ? Number(value) : null,
+          },
+        });
+      }
+    }
+
+    await prisma.payment.create({
+      data: {
+        userId: seller.id,
+        listingId: listing.id,
+        type: "NEW_LISTING",
+        status: "SUCCEEDED",
+        amountCents: settings.priceCents,
+        succeededAt: publishedAt,
+        stripeCheckoutSessionId: `cs_demo_${listing.id}`,
+        stripePaymentIntentId: `pi_demo_${listing.id}`,
+      },
+    });
+
+    created++;
+  }
+
+  // One expired listing to demonstrate the renewal flow in the dashboard.
+  const expiredCategory = categoryBySlug.get("for-sale")!;
+  const expiredLocation = await prisma.location.create({
+    data: { city: "Austin", state: "TX", zip: "78701", country: "US", displayName: "Austin, TX" },
+  });
+  await prisma.listing.create({
+    data: {
+      sellerId: demoUsers[0]!.id,
+      categoryId: expiredCategory.id,
+      locationId: expiredLocation.id,
+      title: "Expired Demo Listing — Try Renewing Me",
+      slug: `expired-demo-listing-${Math.random().toString(36).slice(2, 8)}`,
+      description: "This listing expired 45 days after it was posted. Renew it for $1 to see the renewal flow.",
+      priceCents: 5000,
+      status: "EXPIRED",
+      publishedAt: subDays(new Date(), 50),
+      expiresAt: subDays(new Date(), 5),
+      priceAtPostingCents: settings.priceCents,
+      durationDaysAtPosting: settings.durationDays,
+    },
+  });
+
+  console.log(`Seeded ${created} active demo listings + 1 expired demo listing.`);
 }
 
 async function main() {
   await seedCategories();
   await seedPlatformSettings();
   await seedStaticPages();
-  await seedUsers();
+  const { demoUsers } = await seedUsers();
+  await seedListings(demoUsers, { priceCents: 100, durationDays: 45 });
 }
 
 main()

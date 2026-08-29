@@ -1,0 +1,58 @@
+name: henryslist
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: henryslist
+      POSTGRES_PASSWORD: henryslist_dev_pw
+      POSTGRES_DB: henryslist
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U henryslist"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://henryslist:henryslist_dev_pw@db:5432/henryslist?schema=public
+    volumes:
+      # Local file storage persists across restarts. Not shared across
+      # replicas — for more than one app instance, set STORAGE_PROVIDER=s3
+      # in .env instead and drop this volume.
+      - uploads:/app/public/uploads
+
+  # Fires the expiration/notification sweep hourly by calling the app's own
+  # cron API route — keeps the cron logic in one place (src/lib/listings)
+  # rather than duplicating the whole app image just to run a script.
+  cron:
+    image: curlimages/curl:8.11.0
+    restart: unless-stopped
+    depends_on:
+      - app
+    entrypoint: >
+      /bin/sh -c "
+      while true; do
+        curl -sf -X POST -H \"Authorization: Bearer $${CRON_SECRET}\" http://app:3000/api/cron/expire-listings || true;
+        sleep 3600;
+      done"
+    env_file:
+      - .env
+
+volumes:
+  db-data:
+  uploads:
