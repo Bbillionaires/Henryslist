@@ -347,6 +347,12 @@ model Listing {
   favoriteCount Int @default(0)
   messageCount  Int @default(0)
 
+  // Which "expiring soon" thresholds (e.g. 7, 1 days before expiresAt) have
+  // already been emailed for the current expiresAt, so the expiration cron
+  // never sends the same reminder twice. Reset to [] whenever expiresAt
+  // changes (publish, renew).
+  notifiedDaysBefore Int[] @default([])
+
   // Full text search vector, maintained by a trigger (see migration SQL).
   // Not read/written directly by Prisma Client.
   searchVector Unsupported("tsvector")?

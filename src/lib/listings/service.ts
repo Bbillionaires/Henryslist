@@ -6,6 +6,7 @@ import { getCategoryFieldsFor, buildListingAttributes } from "@/lib/listings/att
 import { notify } from "@/lib/notifications";
 import { emailTemplates } from "@/lib/email/templates";
 import { trackEvent } from "@/lib/audit";
+import { backfillLocationCoordinates } from "@/lib/geo/geocode";
 import { addDays } from "date-fns";
 import type { z } from "zod";
 import type { createDraftListingSchema, updateListingDetailsSchema } from "@/lib/validation/listing";
@@ -49,6 +50,9 @@ export async function createDraftListing(sellerId: string, input: z.infer<typeof
   });
 
   await trackEvent("listing_created", { userId: sellerId, listingId: listing.id });
+  // Best-effort, non-blocking: search still works without coordinates, just
+  // without radius filtering for this listing until it resolves.
+  backfillLocationCoordinates(location.id).catch(() => {});
   return listing;
 }
 
@@ -126,6 +130,7 @@ export async function activateListingFromPayment(paymentId: string) {
       expiresAt,
       priceAtPostingCents: payment.amountCents,
       durationDaysAtPosting: settings.listing_duration_days,
+      notifiedDaysBefore: [],
     },
   });
 
@@ -177,6 +182,7 @@ export async function renewListingFromPayment(paymentId: string) {
         removedAt: null,
         priceAtPostingCents: payment.amountCents,
         durationDaysAtPosting: settings.listing_duration_days,
+        notifiedDaysBefore: [],
       },
     }),
     prisma.renewal.create({
