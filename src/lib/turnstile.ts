@@ -4,8 +4,8 @@ import { env } from "@/lib/env";
 /**
  * Verifies a Cloudflare Turnstile token server-side. Returns true
  * immediately (no-op) if TURNSTILE_SECRET_KEY isn't configured — bot
- * protection is optional infrastructure, not a hard requirement to run the
- * app, matching how Google/Apple OAuth are also gated on env presence.
+ * protection is optional infrastructure, not a hard requirement to run
+ * the app.
  */
 export async function verifyTurnstile(token: string | undefined, ip: string): Promise<boolean> {
   if (!env.TURNSTILE_SECRET_KEY) return true;

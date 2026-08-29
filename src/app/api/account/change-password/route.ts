@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) return NextResponse.json({ error: "Password must be at least 8 characters with a letter and a number." }, { status: 400 });
 
     const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-    if (!dbUser?.passwordHash) return NextResponse.json({ error: "This account doesn't use a password (signed in via Google/Apple)." }, { status: 400 });
+    if (!dbUser?.passwordHash) return NextResponse.json({ error: "This account doesn't have a password set." }, { status: 400 });
 
     const valid = await verifyPassword(parsed.data.currentPassword, dbUser.passwordHash);
     if (!valid) return NextResponse.json({ error: "Current password is incorrect." }, { status: 403 });

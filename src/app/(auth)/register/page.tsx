@@ -68,20 +68,7 @@ export default function RegisterPage() {
       <h1 className="text-2xl font-bold text-slate-900">Create your account</h1>
       <p className="mt-1 text-sm text-slate-500">Browsing is free. Creating an account only takes a minute.</p>
 
-      <button
-        onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-        className="mt-6 flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-      >
-        Continue with Google
-      </button>
-
-      <div className="my-6 flex items-center gap-3 text-xs text-slate-400">
-        <div className="h-px flex-1 bg-slate-200" />
-        OR
-        <div className="h-px flex-1 bg-slate-200" />
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
         {serverError && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{serverError}</div>}
         <div>
           <Label htmlFor="name">Full name</Label>

@@ -10,11 +10,6 @@ const serverSchema = z.object({
   AUTH_SECRET: z.string().min(16, "AUTH_SECRET must be a long random string"),
   AUTH_TRUST_HOST: z.string().optional(),
 
-  AUTH_GOOGLE_ID: z.string().optional(),
-  AUTH_GOOGLE_SECRET: z.string().optional(),
-  AUTH_APPLE_ID: z.string().optional(),
-  AUTH_APPLE_SECRET: z.string().optional(),
-
   STRIPE_SECRET_KEY: z.string().min(1, "STRIPE_SECRET_KEY is required"),
   STRIPE_WEBHOOK_SECRET: z.string().min(1, "STRIPE_WEBHOOK_SECRET is required"),
 

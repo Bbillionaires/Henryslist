@@ -19,8 +19,8 @@ Built with Next.js (App Router), PostgreSQL/Prisma, Auth.js, and Stripe.
 - **Admin dashboard** with 4 RBAC roles (Super Admin, Moderator, Support
   Agent, Finance Admin): user/listing moderation, refunds, category
   management, platform settings, content pages, analytics
-- **Auth**: email/password + Google/Apple OAuth, email verification,
-  password reset, account deletion
+- **Auth**: email/password, email verification, password reset, account
+  deletion
 - SEO (sitemap, robots.txt, JSON-LD, canonical URLs), PWA (installable,
   offline-safe service worker), security headers, rate limiting, audit log
 
@@ -30,7 +30,7 @@ Built with Next.js (App Router), PostgreSQL/Prisma, Auth.js, and Stripe.
 |---|---|
 | Framework | Next.js 15 (App Router), React 19, TypeScript |
 | Database | PostgreSQL + Prisma ORM |
-| Auth | Auth.js (NextAuth v5) — Credentials, Google, Apple |
+| Auth | Auth.js (NextAuth v5) — Credentials (email/password) |
 | Payments | Stripe Checkout + webhooks |
 | Styling | Tailwind CSS v4 |
 | Email | Pluggable: console (dev) / SMTP / Resend |
