@@ -46,6 +46,9 @@ export async function startConversation(buyerId: string, input: { listingId?: st
     }));
 
   const message = await sendMessage(conversation.id, buyerId, input.message);
+  if (!existing && listingId) {
+    await trackEvent("contact_seller_click", { userId: buyerId, listingId });
+  }
   return { conversation, message };
 }
 

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/rbac";
 import { ListChecks, FileEdit, PauseCircle, Clock, MessageCircle, Heart, Bookmark, CreditCard, Settings } from "lucide-react";
+import { VerifyEmailBanner } from "@/components/verify-email-banner";
 
 const NAV = [
   { href: "/dashboard/listings", label: "My Listings", icon: ListChecks },
@@ -35,7 +36,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
           ))}
         </nav>
       </aside>
-      <div>{children}</div>
+      <div>
+        <VerifyEmailBanner />
+        {children}
+      </div>
     </div>
   );
 }

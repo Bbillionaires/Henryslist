@@ -12,6 +12,7 @@ import {
   Settings,
   FileText,
   ShieldCheck,
+  BarChart3,
 } from "lucide-react";
 
 const NAV = [
@@ -22,6 +23,7 @@ const NAV = [
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/reports", label: "Reports", icon: Flag },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/content", label: "Content Pages", icon: FileText },
   { href: "/admin/admins", label: "Admin Users", icon: ShieldCheck },
   { href: "/admin/settings", label: "Settings", icon: Settings },

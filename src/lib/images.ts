@@ -66,6 +66,28 @@ export async function processListingImage(buffer: Buffer): Promise<ProcessedImag
   };
 }
 
+const AVATAR_DIMENSION = 320;
+
+/** Processes a profile photo: square-cropped, fixed size, EXIF stripped. */
+export async function processAvatarImage(buffer: Buffer): Promise<{ url: string; key: string }> {
+  if (buffer.byteLength > MAX_IMAGE_BYTES) {
+    throw new Error(`Image exceeds the ${MAX_IMAGE_BYTES / 1024 / 1024}MB upload limit.`);
+  }
+  const image = sharp(buffer, { failOn: "error" }).rotate();
+  const metadata = await image.metadata();
+  if (!metadata.width || !metadata.height) {
+    throw new Error("Could not read image dimensions — the file may be corrupt or not a supported image.");
+  }
+
+  const output = await image
+    .resize({ width: AVATAR_DIMENSION, height: AVATAR_DIMENSION, fit: "cover" })
+    .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
+    .toBuffer();
+
+  const file = await storage.put(output, { folder: "avatars", extension: "jpg", contentType: "image/jpeg" });
+  return { url: file.url, key: file.key };
+}
+
 export type AutoModerationVerdict = "APPROVED" | "PENDING" | "REJECTED";
 
 /**

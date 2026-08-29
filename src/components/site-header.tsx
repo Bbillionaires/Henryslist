@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Menu, X, Search, PlusCircle, User as UserIcon, Heart, MessageCircle, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
 import type { CategoryWithSubcategories } from "@/lib/categories";
 import { clientEnv } from "@/lib/env";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function SiteHeader({ categories }: { categories: CategoryWithSubcategories[] }) {
   const { data: session, status } = useSession();
@@ -56,6 +57,8 @@ export function SiteHeader({ categories }: { categories: CategoryWithSubcategori
           <Link href="/post" className="sm:hidden" aria-label="Post a listing">
             <PlusCircle size={26} className="text-emerald-600" />
           </Link>
+
+          {status === "authenticated" && <NotificationBell />}
 
           {status === "authenticated" ? (
             <div className="relative">
