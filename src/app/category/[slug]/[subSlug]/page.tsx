@@ -7,6 +7,7 @@ import { getCategoriesWithSubcategories } from "@/lib/categories";
 import { ListingCard } from "@/components/listing-card";
 import { SearchFilters } from "@/app/search/search-filters";
 import { Pagination } from "@/app/search/pagination";
+import { clientEnv } from "@/lib/env";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string; subSlug: string }> }): Promise<Metadata> {
   const { slug, subSlug } = await params;
@@ -14,7 +15,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!category) return {};
   const subcategory = await prisma.subcategory.findUnique({ where: { categoryId_slug: { categoryId: category.id, slug: subSlug } } });
   if (!subcategory) return {};
-  return { title: `${subcategory.name} — ${category.name}` };
+  return {
+    title: `${subcategory.name} — ${category.name}`,
+    alternates: { canonical: `${clientEnv.NEXT_PUBLIC_APP_URL}/category/${slug}/${subSlug}` },
+  };
 }
 
 export default async function SubcategoryPage({

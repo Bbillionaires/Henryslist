@@ -8,12 +8,17 @@ import { ListingCard } from "@/components/listing-card";
 import { SearchFilters } from "@/app/search/search-filters";
 import { Pagination } from "@/app/search/pagination";
 import Link from "next/link";
+import { clientEnv } from "@/lib/env";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const category = await prisma.category.findUnique({ where: { slug } });
   if (!category) return {};
-  return { title: category.name, description: category.description ?? undefined };
+  return {
+    title: category.name,
+    description: category.description ?? undefined,
+    alternates: { canonical: `${clientEnv.NEXT_PUBLIC_APP_URL}/category/${slug}` },
+  };
 }
 
 export default async function CategoryPage({

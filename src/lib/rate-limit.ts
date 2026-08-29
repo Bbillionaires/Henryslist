@@ -77,6 +77,7 @@ export const RATE_LIMITS = {
   CREATE_REPORT: { limit: 20, windowSeconds: 60 * 60 },
   SEARCH: { limit: 120, windowSeconds: 60 },
   UPLOAD_IMAGE: { limit: 60, windowSeconds: 60 * 60 },
+  CHECKOUT: { limit: 20, windowSeconds: 60 * 60 },
 } as const;
 
 export function clientIp(headers: Headers): string {

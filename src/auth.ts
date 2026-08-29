@@ -7,6 +7,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
+import { rateLimit, RATE_LIMITS, clientIp } from "@/lib/rate-limit";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -21,10 +22,14 @@ const providers: Provider[] = [
       email: { label: "Email", type: "email" },
       password: { label: "Password", type: "password" },
     },
-    async authorize(raw) {
+    async authorize(raw, request) {
       const parsed = credentialsSchema.safeParse(raw);
       if (!parsed.success) return null;
       const { email, password } = parsed.data;
+
+      const ip = clientIp(request.headers);
+      const { success } = await rateLimit(`login:${email.toLowerCase()}:${ip}`, RATE_LIMITS.LOGIN.limit, RATE_LIMITS.LOGIN.windowSeconds);
+      if (!success) return null;
 
       const user = await prisma.user.findUnique({
         where: { email: email.toLowerCase() },

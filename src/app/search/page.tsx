@@ -6,7 +6,7 @@ import { SearchFilters } from "./search-filters";
 import { Pagination } from "./pagination";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Search listings" };
+export const metadata: Metadata = { title: "Search listings", robots: { index: false, follow: true } };
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const raw = await searchParams;
