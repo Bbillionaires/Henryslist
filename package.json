@@ -27,7 +27,6 @@
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "isomorphic-dompurify": "^2.20.0",
     "lucide-react": "^0.469.0",
     "nanoid": "^5.0.9",
     "next": "15.5.24",

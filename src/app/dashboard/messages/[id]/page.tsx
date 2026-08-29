@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { ShieldOff, Flag } from "lucide-react";
+import { LeaveReviewButton } from "@/components/leave-review-button";
 import clsx from "clsx";
 
 interface Message {
@@ -107,7 +108,14 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             </Link>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-3">
+          {session?.user?.id && (
+            <LeaveReviewButton
+              revieweeId={conversation.buyer.id === session.user.id ? conversation.seller.id : conversation.buyer.id}
+              revieweeName={otherName ?? "this user"}
+              listingId={conversation.listing?.id}
+            />
+          )}
           <button onClick={report} title="Report" className="rounded p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
             <Flag size={16} />
           </button>
