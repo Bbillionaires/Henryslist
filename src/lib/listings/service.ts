@@ -74,10 +74,10 @@ export async function updateListingDetails(
   const slug = listing.slug && listing.status !== "DRAFT" ? listing.slug : listingSlug(input.title);
 
   const updated = await prisma.$transaction(async (tx) => {
-    if (input.address !== undefined && listing.locationId) {
+    if (listing.locationId) {
       await tx.location.update({
         where: { id: listing.locationId },
-        data: { address: input.address || null },
+        data: { address: input.address || null, showAddressPublicly: input.showExactAddress },
       });
     }
 

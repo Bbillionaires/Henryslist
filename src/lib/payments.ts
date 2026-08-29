@@ -54,28 +54,37 @@ export async function createListingCheckout(listingId: string, userId: string, u
   const cancelUrl =
     type === "NEW_LISTING" ? `${clientEnv.NEXT_PUBLIC_APP_URL}/post/${listingId}/preview` : `${clientEnv.NEXT_PUBLIC_APP_URL}/listings/${listingId}`;
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    payment_method_types: ["card"],
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          unit_amount: amountCents,
-          product_data: {
-            name: `${actionLabel} — ${listing.title}`,
-            description: `${settings.listing_duration_days} days of visibility on ${clientEnv.NEXT_PUBLIC_SITE_NAME}`,
+  let session;
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            unit_amount: amountCents,
+            product_data: {
+              name: `${actionLabel} — ${listing.title}`,
+              description: `${settings.listing_duration_days} days of visibility on ${clientEnv.NEXT_PUBLIC_SITE_NAME}`,
+            },
           },
+          quantity: 1,
         },
-        quantity: 1,
-      },
-    ],
-    customer_email: userEmail ?? undefined,
-    client_reference_id: payment.id,
-    metadata: { paymentId: payment.id, listingId, type, userId },
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-  });
+      ],
+      customer_email: userEmail ?? undefined,
+      client_reference_id: payment.id,
+      metadata: { paymentId: payment.id, listingId, type, userId },
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    });
+  } catch (err) {
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: "FAILED", failureReason: err instanceof Error ? err.message : "Stripe session creation failed" },
+    });
+    throw new PaymentError("Could not start checkout. Please try again in a moment.", 502);
+  }
 
   await prisma.payment.update({ where: { id: payment.id }, data: { stripeCheckoutSessionId: session.id } });
 

@@ -190,7 +190,8 @@ model Location {
   state       String?
   city        String?
   zip         String?
-  address     String? // exact street address, only shown if owner opts in
+  address     String? // exact street address — only ever rendered publicly when showAddressPublicly is true
+  showAddressPublicly Boolean @default(false)
   lat         Float?
   lng         Float?
   displayName String? // e.g. "Austin, TX" — precomputed for fast rendering
