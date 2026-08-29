@@ -7,6 +7,7 @@ import { sendEmail } from "@/lib/email/mailer";
 import { emailTemplates } from "@/lib/email/templates";
 import { rateLimit, RATE_LIMITS, clientIp } from "@/lib/rate-limit";
 import { auditLog } from "@/lib/audit";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req.headers);
@@ -20,8 +21,13 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
   }
-  const { name, email, password } = parsed.data;
+  const { name, email, password, turnstileToken } = parsed.data;
   const normalizedEmail = email.toLowerCase();
+
+  const humanVerified = await verifyTurnstile(turnstileToken, ip);
+  if (!humanVerified) {
+    return NextResponse.json({ error: "Bot verification failed. Please try again." }, { status: 403 });
+  }
 
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {

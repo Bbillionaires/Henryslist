@@ -107,4 +107,59 @@ describe("listing payment lifecycle (integration)", () => {
     const renewalCount = await prisma.renewal.count({ where: { paymentId: payment.id } });
     expect(renewalCount).toBe(1);
   });
+
+  it("auto-flags a listing as a likely duplicate when the same seller activates a near-identical title in the same category within 7 days", async () => {
+    const user = await createTestUser();
+    const category = await createTestCategory();
+
+    const firstListing = await createTestListing(user.id, category.id, {
+      status: "PENDING_PAYMENT",
+      title: "Vintage Leather Sofa",
+    });
+    const firstPayment = await prisma.payment.create({
+      data: { userId: user.id, listingId: firstListing.id, type: "NEW_LISTING", status: "PENDING", amountCents: 100 },
+    });
+    await activateListingFromPayment(firstPayment.id);
+
+    const secondListing = await createTestListing(user.id, category.id, {
+      status: "PENDING_PAYMENT",
+      title: "  Vintage Leather Sofa  ", // same title modulo whitespace/case
+    });
+    const secondPayment = await prisma.payment.create({
+      data: { userId: user.id, listingId: secondListing.id, type: "NEW_LISTING", status: "PENDING", amountCents: 100 },
+    });
+    await activateListingFromPayment(secondPayment.id);
+
+    const reloadedSecond = await prisma.listing.findUniqueOrThrow({ where: { id: secondListing.id } });
+    expect(reloadedSecond.status).toBe("FLAGGED");
+
+    const reloadedFirst = await prisma.listing.findUniqueOrThrow({ where: { id: firstListing.id } });
+    expect(reloadedFirst.status).toBe("ACTIVE");
+
+    const notifications = await prisma.notification.findMany({ where: { userId: user.id, type: "LISTING_MODERATION_UPDATE" } });
+    expect(notifications).toHaveLength(1);
+
+    const auditEntry = await prisma.auditLog.findFirst({ where: { action: "listing.auto_flag_duplicate", entityId: secondListing.id } });
+    expect(auditEntry).not.toBeNull();
+  });
+
+  it("does not flag listings with different titles in the same category", async () => {
+    const user = await createTestUser();
+    const category = await createTestCategory();
+
+    const firstListing = await createTestListing(user.id, category.id, { status: "PENDING_PAYMENT", title: "Vintage Leather Sofa" });
+    const firstPayment = await prisma.payment.create({
+      data: { userId: user.id, listingId: firstListing.id, type: "NEW_LISTING", status: "PENDING", amountCents: 100 },
+    });
+    await activateListingFromPayment(firstPayment.id);
+
+    const secondListing = await createTestListing(user.id, category.id, { status: "PENDING_PAYMENT", title: "Mountain Bike, Barely Used" });
+    const secondPayment = await prisma.payment.create({
+      data: { userId: user.id, listingId: secondListing.id, type: "NEW_LISTING", status: "PENDING", amountCents: 100 },
+    });
+    await activateListingFromPayment(secondPayment.id);
+
+    const reloadedSecond = await prisma.listing.findUniqueOrThrow({ where: { id: secondListing.id } });
+    expect(reloadedSecond.status).toBe("ACTIVE");
+  });
 });

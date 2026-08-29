@@ -5,9 +5,9 @@ import { getPlatformSettings } from "@/lib/settings";
 import { getCategoryFieldsFor, buildListingAttributes } from "@/lib/listings/attributes";
 import { notify } from "@/lib/notifications";
 import { emailTemplates } from "@/lib/email/templates";
-import { trackEvent } from "@/lib/audit";
+import { trackEvent, auditLog } from "@/lib/audit";
 import { backfillLocationCoordinates } from "@/lib/geo/geocode";
-import { addDays } from "date-fns";
+import { addDays, subDays } from "date-fns";
 import type { z } from "zod";
 import type { createDraftListingSchema, updateListingDetailsSchema } from "@/lib/validation/listing";
 
@@ -156,7 +156,53 @@ export async function activateListingFromPayment(paymentId: string) {
     email: receiptTemplate,
   });
 
+  await flagIfDuplicate(listing.id);
+
   return listing;
+}
+
+/**
+ * Lightweight duplicate-listing detection: if this seller already has
+ * another ACTIVE listing in the same category with a near-identical title
+ * posted in the last 7 days, flag the new one for moderator review rather
+ * than silently rejecting it — a legitimate reason to repost (e.g. the
+ * first one had a typo, or they have two of the same item) is common
+ * enough that outright blocking would be wrong, but a human should look.
+ */
+async function flagIfDuplicate(listingId: string) {
+  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  if (!listing) return;
+
+  const normalizedTitle = listing.title.toLowerCase().trim();
+  const recentSameSeller = await prisma.listing.findMany({
+    where: {
+      sellerId: listing.sellerId,
+      categoryId: listing.categoryId,
+      status: "ACTIVE",
+      id: { not: listing.id },
+      publishedAt: { gte: subDays(new Date(), 7) },
+    },
+    select: { id: true, title: true },
+  });
+
+  const duplicate = recentSameSeller.find((other) => other.title.toLowerCase().trim() === normalizedTitle);
+  if (!duplicate) return;
+
+  await prisma.listing.update({ where: { id: listing.id }, data: { status: "FLAGGED" } });
+  await auditLog({
+    actorId: null,
+    action: "listing.auto_flag_duplicate",
+    entityType: "Listing",
+    entityId: listing.id,
+    metadata: { duplicateOfListingId: duplicate.id },
+  });
+  await notify({
+    userId: listing.sellerId,
+    type: "LISTING_MODERATION_UPDATE",
+    title: "Your listing is under review",
+    body: `"${listing.title}" looks similar to another active listing of yours and is being reviewed by our moderation team before it goes live.`,
+    link: `/listings/${listing.id}`,
+  });
 }
 
 /** Called from the Stripe webhook once a RENEWAL payment succeeds. */

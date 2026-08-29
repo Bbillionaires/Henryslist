@@ -9,6 +9,7 @@ import Link from "next/link";
 import { registerSchema } from "@/lib/validation/auth";
 import { Input, Label, FieldError } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import type { z } from "zod";
 
 type FormValues = z.infer<typeof registerSchema>;
@@ -18,6 +19,7 @@ export default function RegisterPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
 
   const {
     register,
@@ -32,7 +34,7 @@ export default function RegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
+      body: JSON.stringify({ ...values, turnstileToken }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -97,6 +99,7 @@ export default function RegisterPage() {
           <FieldError>{errors.password?.message}</FieldError>
           <p className="mt-1 text-xs text-slate-400">At least 8 characters, with a letter and a number.</p>
         </div>
+        <TurnstileWidget onVerify={setTurnstileToken} />
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Creating account…" : "Create account"}
         </Button>

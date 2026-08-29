@@ -9,6 +9,7 @@ export const registerSchema = z.object({
     .max(200)
     .regex(/[a-zA-Z]/, "Password must contain a letter")
     .regex(/[0-9]/, "Password must contain a number"),
+  turnstileToken: z.string().optional(),
 });
 
 export const loginSchema = z.object({
