@@ -61,8 +61,13 @@ function loadServerEnv() {
   // pass where process.env may be partially defined.
   const parsed = serverSchema.safeParse(process.env);
   if (!parsed.success) {
-    const isBuildLint = process.env.SKIP_ENV_VALIDATION === "true";
-    if (isBuildLint) return serverSchema.partial().parse({}) as z.infer<typeof serverSchema>;
+    // NEXT_PHASE is set by Next.js itself during `next build` (not
+    // something any platform needs to configure) — this is what actually
+    // makes the bypass work on Vercel, which builds with plain `next build`
+    // and has no reason to know about our own SKIP_ENV_VALIDATION flag.
+    // Keep SKIP_ENV_VALIDATION too since the Dockerfile sets it explicitly.
+    const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build" || process.env.SKIP_ENV_VALIDATION === "true";
+    if (isBuildPhase) return serverSchema.partial().parse({}) as z.infer<typeof serverSchema>;
     console.error("Invalid environment variables:", parsed.error.flatten().fieldErrors);
     throw new Error("Invalid environment variables. See above for details. Copy .env.example to .env and fill in required values.");
   }
