@@ -46,10 +46,15 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # The `prisma` CLI itself (not just the generated @prisma/client) is needed
 # at runtime so a platform's pre-deploy/release-phase hook can run
-# `npx prisma migrate deploy` against the production database — it's a
+# `prisma migrate deploy` against the production database — it's a
 # devDependency, so the traced standalone output above doesn't include it.
+# Invoke it as `node node_modules/prisma/build/index.js migrate deploy`
+# rather than through the node_modules/.bin/prisma symlink: the CLI resolves
+# its bundled .wasm engine files relative to the executed script's own
+# directory, and running it via the symlink (instead of its real path)
+# makes that resolve to node_modules/.bin instead of node_modules/prisma/build,
+# where the .wasm files actually are.
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
 # Local file storage needs a writable directory if STORAGE_PROVIDER=local.
 # For anything beyond a single-instance/demo deployment, set
