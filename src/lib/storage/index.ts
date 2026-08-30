@@ -71,4 +71,20 @@ class S3Storage implements Storage {
   }
 }
 
-export const storage: Storage = env.STORAGE_PROVIDER === "s3" ? new S3Storage() : new LocalStorage();
+// Constructed lazily, on first real use, rather than at module scope — both
+// LocalStorage and S3Storage read env vars in their field initializers, and
+// Next's build-time "collect page data" step imports every route module
+// (including this one) without invoking it. A Docker build stage commonly
+// has none of these vars set at all, only the running container does.
+let storageInstance: Storage | null = null;
+function getStorage(): Storage {
+  if (!storageInstance) {
+    storageInstance = env.STORAGE_PROVIDER === "s3" ? new S3Storage() : new LocalStorage();
+  }
+  return storageInstance;
+}
+
+export const storage: Storage = {
+  put: (buffer, opts) => getStorage().put(buffer, opts),
+  delete: (key) => getStorage().delete(key),
+};
