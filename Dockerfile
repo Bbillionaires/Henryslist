@@ -34,27 +34,23 @@ ENV HOSTNAME=0.0.0.0
 
 RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 --gid nodejs nextjs
 
-# Standalone output includes only the production node_modules each route
-# actually needs, traced by Next.js at build time — much smaller than
-# shipping the full node_modules tree.
+# The `prisma` CLI (a devDependency, needed so a platform's pre-deploy/
+# release-phase hook can run `node node_modules/prisma/build/index.js
+# migrate deploy` against the production database) pulls in its own
+# transitive dependencies (@prisma/config, effect, ...) that aren't part
+# of the app's own runtime code paths — Next's dependency tracing for the
+# standalone output below has no reason to include them. Rather than
+# individually cherry-picking every package the CLI happens to need (a
+# whack-a-mole that broke twice: first missing prisma itself, then its
+# @prisma/config/effect chain), copy the whole post-`prisma generate`
+# node_modules from the builder stage, then let the standalone output's
+# own (smaller, traced) node_modules layer on top of it.
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-# The `prisma` CLI itself (not just the generated @prisma/client) is needed
-# at runtime so a platform's pre-deploy/release-phase hook can run
-# `prisma migrate deploy` against the production database — it's a
-# devDependency, so the traced standalone output above doesn't include it.
-# Invoke it as `node node_modules/prisma/build/index.js migrate deploy`
-# rather than through the node_modules/.bin/prisma symlink: the CLI resolves
-# its bundled .wasm engine files relative to the executed script's own
-# directory, and running it via the symlink (instead of its real path)
-# makes that resolve to node_modules/.bin instead of node_modules/prisma/build,
-# where the .wasm files actually are.
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Local file storage needs a writable directory if STORAGE_PROVIDER=local.
 # For anything beyond a single-instance/demo deployment, set
