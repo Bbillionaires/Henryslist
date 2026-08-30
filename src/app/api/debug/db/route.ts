@@ -8,32 +8,45 @@ import { getRecentListings, getTrendingListings, getPopularCategories } from "@/
 // so the real Prisma/DB failure surfaces instead of being hidden. Exercises
 // the exact functions the homepage calls so any failing step reports its own
 // name and stack. Delete once the root cause is confirmed and fixed.
+function serializeError(err: unknown) {
+  return {
+    error: err instanceof Error ? err.message : String(err),
+    name: err instanceof Error ? err.name : undefined,
+    stack: err instanceof Error ? err.stack : undefined,
+  };
+}
+
 export async function GET() {
-  const hasDbUrl = Boolean(process.env.DATABASE_URL);
-  const dbUrlHost = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL.replace("postgresql://", "http://")).host : null;
+  const steps: Record<string, unknown> = {};
 
-  const steps: Record<string, unknown> = { hasDbUrl, dbUrlHost };
-  const checks: Array<[string, () => Promise<unknown>]> = [
-    ["rawQuery", () => prisma.$queryRaw`SELECT 1 as ok`],
-    ["categoryCount", () => prisma.category.count()],
-    ["getPlatformSettings", () => getPlatformSettings()],
-    ["getRecentListings", () => getRecentListings(12)],
-    ["getTrendingListings", () => getTrendingListings(8)],
-    ["getPopularCategories", () => getPopularCategories(8)],
-  ];
-
-  for (const [name, fn] of checks) {
+  try {
+    steps.hasDbUrl = Boolean(process.env.DATABASE_URL);
     try {
-      steps[name] = await fn();
+      steps.dbUrlHost = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL.replace("postgresql://", "http://")).host : null;
     } catch (err) {
-      steps[name] = {
-        error: err instanceof Error ? err.message : String(err),
-        name: err instanceof Error ? err.name : undefined,
-        stack: err instanceof Error ? err.stack : undefined,
-      };
-      return NextResponse.json(steps, { status: 500 });
+      steps.dbUrlHost = serializeError(err);
     }
-  }
 
-  return NextResponse.json(steps);
+    const checks: Array<[string, () => Promise<unknown>]> = [
+      ["rawQuery", () => prisma.$queryRaw`SELECT 1 as ok`],
+      ["categoryCount", () => prisma.category.count()],
+      ["getPlatformSettings", () => getPlatformSettings()],
+      ["getRecentListings", () => getRecentListings(12)],
+      ["getTrendingListings", () => getTrendingListings(8)],
+      ["getPopularCategories", () => getPopularCategories(8)],
+    ];
+
+    for (const [name, fn] of checks) {
+      try {
+        steps[name] = await fn();
+      } catch (err) {
+        steps[name] = serializeError(err);
+        return NextResponse.json(steps, { status: 500 });
+      }
+    }
+
+    return NextResponse.json(steps);
+  } catch (err) {
+    return NextResponse.json({ steps, outer: serializeError(err) }, { status: 500 });
+  }
 }
