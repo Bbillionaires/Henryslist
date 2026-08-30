@@ -69,7 +69,10 @@ function loadServerEnv() {
     const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build" || process.env.SKIP_ENV_VALIDATION === "true";
     if (isBuildPhase) return serverSchema.partial().parse({}) as z.infer<typeof serverSchema>;
     console.error("Invalid environment variables:", parsed.error.flatten().fieldErrors);
-    throw new Error("Invalid environment variables. See above for details. Copy .env.example to .env and fill in required values.");
+    // TEMPORARY: surfacing the specific field errors in the thrown message
+    // (not just console.error) since we have no access to this deployment's
+    // function logs. Revert once the root cause is confirmed and fixed.
+    throw new Error(`Invalid environment variables: ${JSON.stringify(parsed.error.flatten().fieldErrors)}`);
   }
   return parsed.data;
 }
