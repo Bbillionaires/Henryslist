@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { env } from "@/lib/env";
 import { CATEGORY_SEED } from "../../../../../prisma/seed-data";
 
 // TEMPORARY, one-time production bootstrap endpoint. Seeds categories,
 // platform settings, static legal/help pages, and a single real admin
 // account - deliberately NOT the full prisma/seed.ts (which also creates
 // demo users/listings with hardcoded passwords, unsuitable for a real
-// production database). Guarded by CRON_SECRET since it's already a
-// required, already-configured production secret. Delete after running once.
+// production database). Self-disabling rather than secret-gated: it
+// refuses to run once any AdminUser already exists, so no token needs to
+// be embedded in source or read back from an env var we can't retrieve.
+// Delete this route after running once.
 
 const STATIC_PAGES: { slug: string; title: string; body: string }[] = [
   {
@@ -134,9 +135,9 @@ async function seedAdmin(email: string, password: string) {
 }
 
 export async function POST(req: Request) {
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const existingAdminCount = await prisma.adminUser.count();
+  if (existingAdminCount > 0) {
+    return NextResponse.json({ error: "Already bootstrapped: an admin account already exists." }, { status: 403 });
   }
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
