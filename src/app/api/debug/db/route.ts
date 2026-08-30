@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getPlatformSettings } from "@/lib/settings";
-import { getRecentListings, getTrendingListings, getPopularCategories } from "@/lib/homepage";
 
 // TEMPORARY diagnostic endpoint for the Vercel runtime-500 investigation.
-// Deliberately does not swallow errors (unlike getCategoriesWithSubcategories)
-// so the real Prisma/DB failure surfaces instead of being hidden. Exercises
-// the exact functions the homepage calls so any failing step reports its own
-// name and stack. Delete once the root cause is confirmed and fixed.
+// Even with every await wrapped in try/catch, this route (and every failing
+// page) was still returning Next's generic /500 fallback rather than a JSON
+// error - meaning the crash happens at MODULE EVALUATION time (import),
+// before any handler code runs, where a normal try/catch can't reach it.
+// Using dynamic import() here converts that module-load crash into a
+// regular exception this handler CAN catch and report. Delete once the
+// root cause is confirmed and fixed.
 function serializeError(err: unknown) {
   return {
     error: err instanceof Error ? err.message : String(err),
@@ -19,34 +19,46 @@ function serializeError(err: unknown) {
 export async function GET() {
   const steps: Record<string, unknown> = {};
 
-  try {
-    steps.hasDbUrl = Boolean(process.env.DATABASE_URL);
+  const modules: Array<[string, () => Promise<unknown>]> = [
+    ["import:@/lib/env", () => import("@/lib/env")],
+    ["import:@/lib/prisma", () => import("@/lib/prisma")],
+    ["import:@/lib/settings", () => import("@/lib/settings")],
+    ["import:@/lib/homepage", () => import("@/lib/homepage")],
+    ["import:@/lib/categories", () => import("@/lib/categories")],
+    ["import:date-fns", () => import("date-fns")],
+    ["import:@/lib/stripe", () => import("@/lib/stripe")],
+    ["import:@/lib/storage", () => import("@/lib/storage")],
+  ];
+
+  for (const [name, fn] of modules) {
     try {
-      steps.dbUrlHost = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL.replace("postgresql://", "http://")).host : null;
+      await fn();
+      steps[name] = "ok";
     } catch (err) {
-      steps.dbUrlHost = serializeError(err);
+      steps[name] = serializeError(err);
     }
-
-    const checks: Array<[string, () => Promise<unknown>]> = [
-      ["rawQuery", () => prisma.$queryRaw`SELECT 1 as ok`],
-      ["categoryCount", () => prisma.category.count()],
-      ["getPlatformSettings", () => getPlatformSettings()],
-      ["getRecentListings", () => getRecentListings(12)],
-      ["getTrendingListings", () => getTrendingListings(8)],
-      ["getPopularCategories", () => getPopularCategories(8)],
-    ];
-
-    for (const [name, fn] of checks) {
-      try {
-        steps[name] = await fn();
-      } catch (err) {
-        steps[name] = serializeError(err);
-        return NextResponse.json(steps, { status: 500 });
-      }
-    }
-
-    return NextResponse.json(steps);
-  } catch (err) {
-    return NextResponse.json({ steps, outer: serializeError(err) }, { status: 500 });
   }
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    steps.rawQuery = await prisma.$queryRaw`SELECT 1 as ok`;
+  } catch (err) {
+    steps.rawQuery = serializeError(err);
+  }
+
+  try {
+    const { getPlatformSettings } = await import("@/lib/settings");
+    steps.getPlatformSettings = await getPlatformSettings();
+  } catch (err) {
+    steps.getPlatformSettings = serializeError(err);
+  }
+
+  try {
+    const { getRecentListings } = await import("@/lib/homepage");
+    steps.getRecentListings = await getRecentListings(12);
+  } catch (err) {
+    steps.getRecentListings = serializeError(err);
+  }
+
+  return NextResponse.json(steps);
 }
