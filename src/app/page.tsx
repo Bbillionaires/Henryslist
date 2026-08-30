@@ -7,6 +7,10 @@ import { ListingCard } from "@/components/listing-card";
 import { CategoryIcon } from "@/components/category-icon";
 import { ArrowRight } from "lucide-react";
 
+// Listings are constantly posted/expiring, so the homepage must reflect
+// current data on every request rather than being frozen at build time.
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const [settings, categories, recentListings, trendingListings, popularCategories] = await Promise.all([
     getPlatformSettings(),

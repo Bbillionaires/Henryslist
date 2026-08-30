@@ -4,6 +4,11 @@ import { clientEnv } from "@/lib/env";
 
 const SITEMAP_LISTING_CAP = 5000;
 
+// Listings are added/expire constantly, so this must be computed per-request
+// (also keeps it out of Next's build-time prerendering, which would need a
+// live database reachable from the build stage).
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = clientEnv.NEXT_PUBLIC_APP_URL;
 

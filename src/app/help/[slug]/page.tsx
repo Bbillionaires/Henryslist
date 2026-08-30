@@ -10,11 +10,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: page.title };
 }
 
-export async function generateStaticParams() {
-  const pages = await prisma.staticPage.findMany({ select: { slug: true } });
-  return pages.map((p) => ({ slug: p.slug }));
-}
-
 export default async function HelpPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const page = await prisma.staticPage.findUnique({ where: { slug } });
