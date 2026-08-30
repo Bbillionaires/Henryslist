@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
   // it there causes runtime 500s. VERCEL=1 is set automatically by Vercel's
   // build environment, so this only takes effect for the Docker build.
   output: process.env.VERCEL ? undefined : "standalone",
+
+  // Opt Prisma out of Next's file-tracing/bundling entirely so its native
+  // query-engine binary resolves via plain Node `require()` at runtime.
+  // Without this, Vercel's serverless functions for App Router *pages*
+  // (Server Components) fail to include the engine binary even though
+  // Route Handlers hitting the same Prisma client work fine — the two use
+  // different bundling paths and only the page path was missing it.
+  serverExternalPackages: ["@prisma/client", "@prisma/engines"],
 };
 
 export default nextConfig;
