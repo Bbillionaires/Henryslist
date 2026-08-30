@@ -56,7 +56,16 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # For anything beyond a single-instance/demo deployment, set
 # STORAGE_PROVIDER=s3 instead — this directory does not persist across
 # container restarts or multiple replicas.
-RUN mkdir -p /app/public/uploads && chown -R nextjs:nodejs /app/public/uploads
+#
+# public/uploads is a symlink into a *subdirectory* of where a persistent
+# volume gets mounted (/app/uploads-volume), not the mount root itself.
+# A freshly-mounted block volume's root gets an ext4 `lost+found` directory
+# (owned root:root, mode 700, regardless of the rest of the filesystem's
+# permissions) — Next.js's own startup scan of public/ recurses into
+# whatever public/uploads points at and crashes with EACCES the instant it
+# tries to read that directory. Nesting one level down keeps lost+found
+# outside anything under public/ that Next (or our own code) ever walks.
+RUN mkdir -p /app/uploads-volume && ln -s /app/uploads-volume/files /app/public/uploads
 
 USER nextjs
 EXPOSE 3000
