@@ -41,8 +41,15 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# The `prisma` CLI itself (not just the generated @prisma/client) is needed
+# at runtime so a platform's pre-deploy/release-phase hook can run
+# `npx prisma migrate deploy` against the production database — it's a
+# devDependency, so the traced standalone output above doesn't include it.
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
 # Local file storage needs a writable directory if STORAGE_PROVIDER=local.
 # For anything beyond a single-instance/demo deployment, set
